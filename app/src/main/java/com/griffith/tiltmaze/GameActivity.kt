@@ -1,3 +1,5 @@
+// Sergio Alves Da Silva Student Number: 3139115
+
 package com.griffith.tiltmaze
 
 import android.content.Intent
@@ -13,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import java.util.Locale
+import kotlin.time.Duration.Companion.milliseconds
 
 
 class GameActivity : ComponentActivity() {
@@ -26,7 +29,7 @@ class GameActivity : ComponentActivity() {
                 )
 
                 intent.putExtra(
-                    "Game_Time", seconds
+                    "GAME_TIME", seconds
                 ) // Pass the completion time to ResultsActivity.
 
                 startActivity(intent) // Open the results screen.
@@ -56,13 +59,13 @@ fun GameScreen(
         mutableDoubleStateOf(0.0)
     }
     // LaunchedEffect starts a new routine.
-    // It is cancelled when this composable leaves the UI.
+    // It is canceled when this composable leaves the UI.
     LaunchedEffect(Unit) {
 
         // Continuously update the timer.
         while (true) {
             elapsedSeconds = (SystemClock.elapsedRealtime() - startTime) / 1000.0
-            delay(100)
+            delay(100.milliseconds)
         }
     }
 
@@ -158,7 +161,7 @@ fun GameScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Finish demo button.
+            // Finish game button.
             Button(
                 onClick = {
                     // Calculate the elapsed time when pressed.
@@ -168,7 +171,7 @@ fun GameScreen(
                     onFinish(finalTime)
                 }, modifier = Modifier.fillMaxWidth()
             ) {
-                Text("FINISH DEMO")
+                Text("FINISH GAME")
             }
 
             // Back to menu button.

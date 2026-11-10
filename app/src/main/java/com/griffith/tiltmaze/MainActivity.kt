@@ -90,10 +90,10 @@ fun MainMenuScreen(
                 // Add 24dp spacing inside the screen.
                 .padding(24.dp),
 
-            // Place items in the centre vertically.
+            // Place items in the center vertically.
             verticalArrangement = Arrangement.Center,
 
-            // Place items in the centre horizontally.
+            // Place items in the center horizontally.
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
@@ -185,8 +185,7 @@ fun MainMenuScreen(
                     "Guide the ball through the maze " +
                             "and reach the goal.\n\n" +
                             "Use the directional " +
-                            "buttons to move the ball,\n\n" +
-                            "till the end of the maze."
+                            "buttons to move the ball,till the end of the maze."
                 )
             },
 

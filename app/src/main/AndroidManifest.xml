@@ -11,18 +11,36 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.TiltMaze">
+
+        <!-- MAIN ACTIVITY -->
+        <!-- This screen opens when the user launches the app. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.TiltMaze"
             android:windowSoftInputMode="adjustResize">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
         </activity>
+
+        <!-- GAME ACTIVITY -->
+        <!-- This screen opens when START GAME is pressed. -->
+        <activity
+            android:name=".GameActivity"
+            android:exported="false" />
+
+        <!-- RESULTS ACTIVITY -->
+        <!-- This screen displays the completion time. -->
+        <activity
+            android:name=".ResultsActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>
