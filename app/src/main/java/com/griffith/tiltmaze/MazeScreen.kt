@@ -56,17 +56,20 @@ fun MazeScreen(
             )
         }
 
-        // Draw the outer stone walls.
-        drawStoneWall(w, h, .08f, .10f, .92f, .12f)
-        drawStoneWall(w, h, .08f, .88f, .92f, .90f)
-        drawStoneWall(w, h, .08f, .10f, .10f, .90f)
-        drawStoneWall(w, h, .90f, .10f, .92f, .90f)
+        // Draw all walls in the game.
+        // Use the same wall positions as collision detection.
+        MazeLayout.walls.forEach { wall ->
+            drawStoneWall(
+                w = w,
+                h = h,
+                left = wall.left,
+                top = wall.top,
+                right = wall.right,
+                bottom = wall.bottom
 
+            )
+        }
 
-        // Draw the internal walls.
-        // Maze coordinates.
-        drawStoneWall(w, h, .38f, .10f, .40f, .65f)
-        drawStoneWall(w, h, .62f, .35f, .64f, .90f)
 
 
         // Draw the new goal.
@@ -121,7 +124,7 @@ fun MazeScreen(
         // Main new ball.
         drawCircle(
             color = magicBlue,
-            radius = 13f,
+            radius = MazeLayout.BALL_RADIUS,
             center = ballPosition
         )
 
@@ -147,7 +150,7 @@ private fun DrawScope.drawStoneWall(
     bottom: Float
 ) {
 
-    // Dark shadow behind the stone.
+    // Dark shadow behind the stone walls.
     drawRect(
         color = stoneShadow,
         topLeft = Offset(w * left, h * top),

@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import java.util.Locale
 import kotlin.time.Duration.Companion.milliseconds
+import androidx.compose.ui.layout.onSizeChanged
 
 
 
@@ -35,6 +36,9 @@ class GameActivity : ComponentActivity(), SensorEventListener {
     // Ball position.
     private var ballX by mutableFloatStateOf(0.20f)
     private var ballY by mutableFloatStateOf(0.22f)
+
+    private var mazeWidth = 0f
+    private var mazeHeight = 0f
 
     private var smoothX = 0f
     private var smoothY = 0f
@@ -68,6 +72,13 @@ class GameActivity : ComponentActivity(), SensorEventListener {
             GameScreen(
                 ballX = ballX,
                 ballY = ballY,
+
+                onMazeSizeChanged = { width, height ->
+                    // Update the dimensions used for collisions.
+                    mazeWidth = width
+                    mazeHeight = height
+
+                },
 
                 // Called when a direction button is pressed.
                 onMove = { dx, dy ->
@@ -183,9 +194,60 @@ class GameActivity : ComponentActivity(), SensorEventListener {
     // Called by the sensor and by the direction buttons.
     private fun moveBall(dx: Float, dy: Float) {
 
-        // Keep the orb inside the approximate game area.
-        ballX = (ballX + dx).coerceIn(0.12f, 0.88f)
-        ballY = (ballY + dy).coerceIn(0.14f, 0.86f)
+        // Wait until we know the maze dimensions.
+        if (mazeWidth <= 0f || mazeHeight <= 0f) {
+            return
+        }
+        // Divide movement into small steps and this prevents fast movement from jumping through walls.
+        val distanceX = kotlin.math.abs(dx * mazeWidth)
+        val distanceY = kotlin.math.abs(dy * mazeHeight)
+
+        val maxDistance = kotlin.math.max(
+            distanceX,
+            distanceY
+        )
+        // Each movement step is at most half the orb's radius.
+        val maxStep = MazeLayout.BALL_RADIUS / 2f
+
+        val steps = kotlin.math.ceil(
+            maxDistance / maxStep
+        ).toInt().coerceAtLeast(1)
+
+        val stepX = dx / steps
+        val stepY = dy / steps
+
+        repeat(steps) {
+            // Keep the orb inside the approximate game area.
+            val nextX = (ballX + stepX)
+                .coerceIn(0.12f,0.88f)
+
+            val nextY = (ballY + stepY)
+                .coerceIn(0.14f, 0.86f)
+
+            // Check horizontal movement first.
+            if (
+                MazeLayout.isPositionClear(
+                    nextX,
+                    ballY,
+                    mazeWidth,
+                    mazeHeight
+                )
+            ) {
+                ballX = nextX
+            }
+            // Check vertical movement separately. This allows the orb to slide along a wall.
+            if (
+                MazeLayout.isPositionClear(
+                    ballX,
+                    nextY,
+                    mazeWidth,
+                    mazeHeight
+                )
+            ) {
+                ballY = nextY
+            }
+        }
+
     }
 }
 
@@ -193,6 +255,7 @@ class GameActivity : ComponentActivity(), SensorEventListener {
 fun GameScreen(
     ballX: Float,
     ballY: Float,
+    onMazeSizeChanged: (Float, Float) -> Unit,
     onMove: (Float, Float) -> Unit,
     onFinish: (Double) -> Unit, // Function that receives the elapsed time.
     onExit: () -> Unit
@@ -263,6 +326,13 @@ fun GameScreen(
 
                     // Use the remaining vertical space.
                     .weight(1f)
+                    // Measure the Canvas when its size changes.
+                    .onSizeChanged { size ->
+                        onMazeSizeChanged(
+                            size.width.toFloat(),
+                            size.height.toFloat()
+                        )
+                    }
             )
 
             // UP button.
