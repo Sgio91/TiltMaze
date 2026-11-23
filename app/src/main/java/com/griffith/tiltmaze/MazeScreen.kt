@@ -1,4 +1,4 @@
-
+// Sergio Alves Da Silva Student Number: 3139115
 package com.griffith.tiltmaze
 
 import androidx.compose.foundation.Canvas
@@ -19,9 +19,7 @@ private val templeGold = Color(0xFFE7C675)
 
 @Composable
 fun MazeScreen(
-    ballX: Float,
-    ballY: Float,
-    modifier: Modifier = Modifier
+    ballX: Float, ballY: Float, modifier: Modifier = Modifier
 ) {
 
     // Canvas lets us draw the game using shapes.
@@ -34,7 +32,7 @@ fun MazeScreen(
         val h = size.height
 
 
-         // Draw the floor.
+        // Draw the floor.
         // Add subtle lines to resemble stone tiles.
         for (i in 1..9) {
 
@@ -71,70 +69,51 @@ fun MazeScreen(
         }
 
 
-
-        // Draw the new goal.
         val goal = Offset(
-            x = w * .80f,
-            y = h * .78f
+            x = w * MazeLayout.GOAL_X, y = h * MazeLayout.GOAL_Y
         )
 
         // Soft golden glow around the goal.
         drawCircle(
-            color = templeGold.copy(alpha = 0.18f),
-            radius = 28f,
-            center = goal
+            color = templeGold.copy(alpha = 0.18f), radius = 28f, center = goal
         )
 
         // Golden outer ring.
         drawCircle(
-            color = templeGold,
-            radius = 17f,
-            center = goal
+            color = templeGold, radius = MazeLayout.GOAL_RADIUS, center = goal
         )
 
         // Dark center, giving a different appearance.
         drawCircle(
-            color = forestGreen,
-            radius = 11f,
-            center = goal
+            color = forestGreen, radius = 11f, center = goal
         )
 
         // Golden center.
         drawCircle(
-            color = templeGold,
-            radius = 5f,
-            center = goal
+            color = templeGold, radius = 5f, center = goal
         )
 
 
         // Draw the new ball layout.
         // ballX and ballY come from GameActivity.
         val ballPosition = Offset(
-            x = w * ballX,
-            y = h * ballY
+            x = w * ballX, y = h * ballY
         )
 
         // Soft outer glow.
         drawCircle(
-            color = magicBlue.copy(alpha = 0.20f),
-            radius = 24f,
-            center = ballPosition
+            color = magicBlue.copy(alpha = 0.20f), radius = 24f, center = ballPosition
         )
 
         // Main new ball.
         drawCircle(
-            color = magicBlue,
-            radius = MazeLayout.BALL_RADIUS,
-            center = ballPosition
+            color = magicBlue, radius = MazeLayout.BALL_RADIUS, center = ballPosition
         )
 
         // Small highlight makes it look more luminous.
         drawCircle(
-            color = Color.White.copy(alpha = 0.8f),
-            radius = 4f,
-            center = Offset(
-                x = ballPosition.x - 4f,
-                y = ballPosition.y - 4f
+            color = Color.White.copy(alpha = 0.8f), radius = 4f, center = Offset(
+                x = ballPosition.x - 4f, y = ballPosition.y - 4f
             )
         )
     }
@@ -142,21 +121,13 @@ fun MazeScreen(
 
 // Reusable function to draw stone walls.
 private fun DrawScope.drawStoneWall(
-    w: Float,
-    h: Float,
-    left: Float,
-    top: Float,
-    right: Float,
-    bottom: Float
+    w: Float, h: Float, left: Float, top: Float, right: Float, bottom: Float
 ) {
 
     // Dark shadow behind the stone walls.
     drawRect(
-        color = stoneShadow,
-        topLeft = Offset(w * left, h * top),
-        size = Size(
-            w * (right - left),
-            h * (bottom - top)
+        color = stoneShadow, topLeft = Offset(w * left, h * top), size = Size(
+            w * (right - left), h * (bottom - top)
         )
     )
 
@@ -169,18 +140,13 @@ private fun DrawScope.drawStoneWall(
     val wallWidth = w * (right - left)
     val wallHeight = h * (bottom - top)
 
-    if (wallWidth > inset * 2 &&
-        wallHeight > inset * 2) {
+    if (wallWidth > inset * 2 && wallHeight > inset * 2) {
 
         drawRect(
-            color = stoneColour,
-            topLeft = Offset(
-                wallLeft + inset,
-                wallTop + inset
-            ),
-            size = Size(
-                wallWidth - inset * 2,
-                wallHeight - inset * 2
+            color = stoneColour, topLeft = Offset(
+                wallLeft + inset, wallTop + inset
+            ), size = Size(
+                wallWidth - inset * 2, wallHeight - inset * 2
             )
         )
     }

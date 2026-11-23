@@ -11,17 +11,18 @@ import android.os.Bundle
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.delay
 import java.util.Locale
 import kotlin.time.Duration.Companion.milliseconds
-import androidx.compose.ui.layout.onSizeChanged
-
 
 
 // The GameActivity also implements SensorEventListener, this allows it to receive updates from the accelerometer.
@@ -37,6 +38,10 @@ class GameActivity : ComponentActivity(), SensorEventListener {
     private var ballX by mutableFloatStateOf(0.20f)
     private var ballY by mutableFloatStateOf(0.22f)
 
+    // Store whether the game is currently paused.
+    private var isGamePaused = false
+
+    // Store the dimensions used for collisions.
     private var mazeWidth = 0f
     private var mazeHeight = 0f
 
@@ -77,7 +82,6 @@ class GameActivity : ComponentActivity(), SensorEventListener {
                     // Update the dimensions used for collisions.
                     mazeWidth = width
                     mazeHeight = height
-
                 },
 
                 // Called when a direction button is pressed.
@@ -85,9 +89,49 @@ class GameActivity : ComponentActivity(), SensorEventListener {
                     moveBall(dx, dy)
                 },
 
+                // Called when the player presses Pause or Resume.
+                onPauseChanged = { paused ->
+
+                    // Update the pause state.
+                    isGamePaused = paused
+
+                    if (paused) {
+                        // Stop receiving sensor readings while paused.
+                        sensorManager.unregisterListener(this)
+                    } else {
+                        // Reset sensor timing to avoid sudden movement.
+                        lastSensorTime = 0L
+                        smoothX = 0f
+                        smoothY = 0f
+
+                        // Start receiving accelerometer readings again.
+                        accelerometer?.let { sensor ->
+                            sensorManager.registerListener(
+                                this,
+                                sensor,
+                                SensorManager.SENSOR_DELAY_GAME
+                            )
+                        }
+                    }
+                },
+
+                // Called when the player presses Restart.
+                onRestart = {
+
+                    // Return the orb to its original position.
+                    ballX = 0.20f
+                    ballY = 0.22f
+
+                    // Reset sensor smoothing.
+                    lastSensorTime = 0L
+                    smoothX = 0f
+                    smoothY = 0f
+                },
+
                 onFinish = { seconds -> // Send the final time to ResultsActivity.
                     val intent = Intent(
-                        this, ResultsActivity::class.java // Creating ResultsActivity next.
+                        this,
+                        ResultsActivity::class.java
                     )
 
                     intent.putExtra(
@@ -115,12 +159,14 @@ class GameActivity : ComponentActivity(), SensorEventListener {
         smoothY = 0f
 
         // Start receiving accelerometer readings.
-        accelerometer?.let { sensor ->
-            sensorManager.registerListener(
-                this,
-                sensor,
-                SensorManager.SENSOR_DELAY_GAME
-            )
+        if (!isGamePaused) {
+            accelerometer?.let { sensor ->
+                sensorManager.registerListener(
+                    this,
+                    sensor,
+                    SensorManager.SENSOR_DELAY_GAME
+                )
+            }
         }
     }
 
@@ -140,6 +186,11 @@ class GameActivity : ComponentActivity(), SensorEventListener {
             return
         }
 
+        // Ignore accelerometer data while the game is paused.
+        if (isGamePaused) {
+            return
+        }
+
         // Read acceleration along X and Y.
         val accelerationX = event.values[0]
         val accelerationY = event.values[1]
@@ -148,7 +199,7 @@ class GameActivity : ComponentActivity(), SensorEventListener {
         smoothX = smoothX * 0.8f + accelerationX * 0.2f
         smoothY = smoothY * 0.8f + accelerationY * 0.2f
 
-        // Calculate elpsed time between sensor readings and sensor timestamps are measured in nanoseconds.
+        // Calculate elapsed time between sensor readings and sensor timestamps are measured in nanoseconds.
         val deltaTime = if (lastSensorTime == 0L) {
             0f
         } else {
@@ -176,7 +227,7 @@ class GameActivity : ComponentActivity(), SensorEventListener {
         // Movement sensitivity and increase this value to move faster.
         val sensitivity = 0.055f
 
-        // Calculate movement using acceleration and time
+        // Calculate movement using acceleration and time.
         val dx = -tiltX * sensitivity * deltaTime
         val dy = tiltY * sensitivity * deltaTime
 
@@ -194,10 +245,16 @@ class GameActivity : ComponentActivity(), SensorEventListener {
     // Called by the sensor and by the direction buttons.
     private fun moveBall(dx: Float, dy: Float) {
 
+        // Do not move the orb while the game is paused.
+        if (isGamePaused) {
+            return
+        }
+
         // Wait until we know the maze dimensions.
         if (mazeWidth <= 0f || mazeHeight <= 0f) {
             return
         }
+
         // Divide movement into small steps and this prevents fast movement from jumping through walls.
         val distanceX = kotlin.math.abs(dx * mazeWidth)
         val distanceY = kotlin.math.abs(dy * mazeHeight)
@@ -206,6 +263,7 @@ class GameActivity : ComponentActivity(), SensorEventListener {
             distanceX,
             distanceY
         )
+
         // Each movement step is at most half the orb's radius.
         val maxStep = MazeLayout.BALL_RADIUS / 2f
 
@@ -217,9 +275,10 @@ class GameActivity : ComponentActivity(), SensorEventListener {
         val stepY = dy / steps
 
         repeat(steps) {
+
             // Keep the orb inside the approximate game area.
             val nextX = (ballX + stepX)
-                .coerceIn(0.12f,0.88f)
+                .coerceIn(0.12f, 0.88f)
 
             val nextY = (ballY + stepY)
                 .coerceIn(0.14f, 0.86f)
@@ -235,6 +294,7 @@ class GameActivity : ComponentActivity(), SensorEventListener {
             ) {
                 ballX = nextX
             }
+
             // Check vertical movement separately. This allows the orb to slide along a wall.
             if (
                 MazeLayout.isPositionClear(
@@ -247,9 +307,9 @@ class GameActivity : ComponentActivity(), SensorEventListener {
                 ballY = nextY
             }
         }
-
     }
 }
+
 
 @Composable // This composable draws the gameplay interface.
 fun GameScreen(
@@ -257,17 +317,57 @@ fun GameScreen(
     ballY: Float,
     onMazeSizeChanged: (Float, Float) -> Unit,
     onMove: (Float, Float) -> Unit,
+    onPauseChanged: (Boolean) -> Unit,
+    onRestart: () -> Unit,
     onFinish: (Double) -> Unit, // Function that receives the elapsed time.
     onExit: () -> Unit
 ) {
+
+
+// New style colors used throughout the Game Screen.
+    val forestGreen = Color(0xFF172C23)
+    val templeGold = Color(0xFFE7C675)
+    val parchment = Color(0xFFF4E9C8)
+    val lightGreen = Color(0xFFB9CDB5)
+    val stoneGreen = Color(0xFF344C3C)
+
     // Record when the game begins.
-    val startTime = remember {
-        SystemClock.elapsedRealtime()
+    var startTime by remember {
+        mutableLongStateOf(SystemClock.elapsedRealtime())
     }
 
     // Store elapsed game time in seconds.
     var elapsedSeconds by remember {
         mutableDoubleStateOf(0.0)
+    }
+
+    // Stores whether the game is paused.
+    var isPaused by remember {
+        mutableStateOf(false)
+    }
+
+    // Stores when the current pause started.
+    var pausedAt by remember {
+        mutableLongStateOf(0L)
+    }
+
+    // Stores the total time spent paused in milliseconds.
+    var totalPausedTime by remember {
+        mutableLongStateOf(0L)
+    }
+
+    // Store the actual maze size for goal detection.
+    var currentMazeWidth by remember {
+        mutableFloatStateOf(0f)
+    }
+
+    var currentMazeHeight by remember {
+        mutableFloatStateOf(0f)
+    }
+
+    // Prevent the game from finishing more than once.
+    var gameFinished by remember {
+        mutableStateOf(false)
     }
 
     // LaunchedEffect starts a new routine.
@@ -276,21 +376,125 @@ fun GameScreen(
 
         // Continuously update the timer.
         while (true) {
-            elapsedSeconds = (SystemClock.elapsedRealtime() - startTime) / 1000.0
+
+            // Only update the timer while the game is running.
+            if (!isPaused && !gameFinished) {
+
+                val currentTime = SystemClock.elapsedRealtime()
+
+                // Calculate how many seconds have passed since the game started.
+                elapsedSeconds =
+                    (currentTime - startTime - totalPausedTime)
+                        .coerceAtLeast(0L) / 1000.0
+            }
+
+            // Update the timer every 100 milliseconds.
             delay(100.milliseconds)
         }
     }
 
-    // Provides a basic screen structure.
+    // Automatically detect when the orb reaches the goal.
+    // This runs again when the ball's position changes.
+    LaunchedEffect(
+        ballX,
+        ballY,
+        currentMazeWidth,
+        currentMazeHeight,
+        isPaused
+    ) {
+
+        // Only check if the game has not finished.
+        if (!gameFinished && !isPaused) {
+
+            // Ask MazeLayout whether the orb touches the final point.
+            val reachedGoal = MazeLayout.hasReachedGoal(
+                ballX = ballX,
+                ballY = ballY,
+                width = currentMazeWidth,
+                height = currentMazeHeight
+            )
+
+            if (reachedGoal) {
+
+                // Prevent multiple finish events.
+                gameFinished = true
+
+                // Calculate the final completion time.
+                val finalTime =
+                    (SystemClock.elapsedRealtime() - startTime - totalPausedTime)
+                        .coerceAtLeast(0L) / 1000.0
+
+                // Open ResultsActivity automatically.
+                onFinish(finalTime)
+            }
+        }
+    }
+// Provides a basic screen structure.
     Scaffold(
+        // Dark forest background.
+        containerColor = forestGreen,
 
         // Display the game title at the top.
         topBar = {
-            Text(
-                text = "TILT MAZE",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(16.dp)
-            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                // Title and subtitle.
+                Column {
+
+                    Text(
+                        text = "THE LOST WOOD",
+                        color = templeGold,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+
+                    Text(
+                        text = "TILT MAZE",
+                        color = parchment,
+                        style = MaterialTheme.typography.headlineMedium
+                    )
+                }
+
+                // Display elapsed time in a fantasy-style panel.
+                Surface(
+                    color = stoneGreen,
+                    shape = MaterialTheme.shapes.medium,
+                    border = BorderStroke(1.dp, templeGold)
+                ) {
+
+                    Column(
+                        modifier = Modifier.padding(
+                            horizontal = 16.dp,
+                            vertical = 8.dp
+                        ),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+
+                        Text(
+                            text = "TIME",
+                            color = lightGreen,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+
+                        Text(
+                            text = String.format(
+                                Locale.US,
+                                "%.1f s",
+                                elapsedSeconds
+                            ),
+                            color = templeGold,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                }
+            }
         }
 
     ) { innerPadding ->
@@ -309,14 +513,8 @@ fun GameScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // Timer text.
-            Text(
-                text = String.format(
-                    Locale.US, "Time: %.1f seconds", elapsedSeconds
-                )
-            )
-
             // Custom Maze component.
+            // The existing maze design and collision logic stay unchanged.
             MazeScreen(
                 ballX = ballX,
                 ballY = ballY,
@@ -326,8 +524,15 @@ fun GameScreen(
 
                     // Use the remaining vertical space.
                     .weight(1f)
+
                     // Measure the Canvas when its size changes.
                     .onSizeChanged { size ->
+
+                        // Store the dimensions for goal detection.
+                        currentMazeWidth = size.width.toFloat()
+                        currentMazeHeight = size.height.toFloat()
+
+                        // Send dimensions to GameActivity for wall collision detection.
                         onMazeSizeChanged(
                             size.width.toFloat(),
                             size.height.toFloat()
@@ -335,12 +540,18 @@ fun GameScreen(
                     }
             )
 
+            Spacer(modifier = Modifier.height(8.dp))
+
             // UP button.
             Button(
                 onClick = {
                     // Reduce Y to move upwards.
                     onMove(0f, -0.03f)
-                }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = stoneGreen,
+                    contentColor = parchment
+                )
             ) {
                 Text("UP")
             }
@@ -355,7 +566,11 @@ fun GameScreen(
                     onClick = {
                         // Reduce X to move left.
                         onMove(-0.03f, 0f)
-                    }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = stoneGreen,
+                        contentColor = parchment
+                    )
                 ) {
                     Text("LEFT")
                 }
@@ -365,7 +580,11 @@ fun GameScreen(
                     onClick = {
                         // Increase Y to move down.
                         onMove(0f, 0.03f)
-                    }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = stoneGreen,
+                        contentColor = parchment
+                    )
                 ) {
                     Text("DOWN")
                 }
@@ -375,7 +594,11 @@ fun GameScreen(
                     onClick = {
                         // Increase X to move right.
                         onMove(0.03f, 0f)
-                    }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = stoneGreen,
+                        contentColor = parchment
+                    )
                 ) {
                     Text("RIGHT")
                 }
@@ -383,27 +606,110 @@ fun GameScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Finish game button.
-            Button(
-                onClick = {
-                    // Calculate the elapsed time when pressed.
-                    val finalTime = (SystemClock.elapsedRealtime() - startTime) / 1000.0
-
-                    // Send the result to GameActivity.
-                    onFinish(finalTime)
-                },
-                modifier = Modifier.fillMaxWidth()
+            // Pause and Restart controls.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("FINISH GAME")
+
+                // Pause / Resume button.
+                Button(
+                    onClick = {
+
+                        // Calculate the elapsed time when pressed.
+                        val now = SystemClock.elapsedRealtime()
+
+                        if (!isPaused) {
+
+                            // Store when the pause starts.
+                            pausedAt = now
+
+                            // Freeze the displayed timer.
+                            elapsedSeconds =
+                                (now - startTime - totalPausedTime)
+                                    .coerceAtLeast(0L) / 1000.0
+
+                            // Pause the game.
+                            isPaused = true
+                            onPauseChanged(true)
+
+                        } else {
+
+                            // Add the paused duration to total pause time.
+                            totalPausedTime += now - pausedAt
+
+                            // Resume the game.
+                            isPaused = false
+                            onPauseChanged(false)
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+
+                    // Golden button matching the Main Menu.
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = templeGold,
+                        contentColor = forestGreen
+                    )
+                ) {
+                    Text(if (isPaused) "RESUME" else "PAUSE")
+                }
+
+                // Restart Button.
+                OutlinedButton(
+                    onClick = {
+
+                        // Reset the game clock.
+                        startTime = SystemClock.elapsedRealtime()
+                        elapsedSeconds = 0.0
+
+                        // Clear pause history.
+                        pausedAt = 0L
+                        totalPausedTime = 0L
+
+                        // Reset the game state.
+                        gameFinished = false
+                        isPaused = false
+
+                        // Return the orb to its starting position.
+                        onRestart()
+
+                        // Allow movement again.
+                        onPauseChanged(false)
+                    },
+                    modifier = Modifier.weight(1f),
+
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = parchment
+                    ),
+
+                    border = BorderStroke(
+                        width = 1.dp,
+                        color = templeGold
+                    )
+                ) {
+                    Text("RESTART")
+                }
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Back to menu button.
             OutlinedButton(
                 onClick = onExit,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = lightGreen
+                ),
+
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = lightGreen
+                )
             ) {
                 Text("BACK TO MENU")
             }
         }
     }
 }
+

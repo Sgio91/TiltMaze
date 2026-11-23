@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,7 +19,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 
-// MAIN ACTIVITY
 // This is the first Activity launched when the app opens.
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -36,20 +36,17 @@ class MainActivity : ComponentActivity() {
                     // Create an Explicit Intent.
                     // We specify exactly which Activity to open.
                     val intent = Intent(
-                        this,
-                        GameActivity::class.java
+                        this, GameActivity::class.java
                     )
 
                     // Ask Android to open GameActivity(Not created yet).
                     startActivity(intent)
-                }
-            )
+                })
         }
     }
 }
 
 
-// @Composable means this function creates UI.
 // We use it to build our Main Menu.
 @Composable
 fun MainMenuScreen(
@@ -60,7 +57,6 @@ fun MainMenuScreen(
 ) {
 
     // This variable controls the Instructions dialog.
-    // false = hidden, true = visible.
     var showInstructions by remember {
         mutableStateOf(false)
     }
@@ -70,14 +66,18 @@ fun MainMenuScreen(
         mutableStateOf(false)
     }
 
+    // Inspired in Zelda games colors.
+    val forestGreen = Color(0xFF172C23)
+    val templeGold = Color(0xFFE7C675)
+    val parchment = Color(0xFFF4E9C8)
+    val lightGreen = Color(0xFFB9CDB5)
+
+
     // Surface is the background container for the screen.
     Surface(
 
         // fillMaxSize() makes it cover the whole screen.
-        modifier = Modifier.fillMaxSize(),
-
-        // Set a dark blue background.
-        color = Color(0xFF14213D)
+        modifier = Modifier.fillMaxSize(), color = forestGreen
     ) {
 
         // Column arranges elements vertically.
@@ -87,8 +87,8 @@ fun MainMenuScreen(
                 // Use all available screen space.
                 .fillMaxSize()
 
-                // Add 24dp spacing inside the screen.
-                .padding(24.dp),
+
+                .padding(28.dp),
 
             // Place items in the center vertically.
             verticalArrangement = Arrangement.Center,
@@ -97,21 +97,35 @@ fun MainMenuScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // GAME TITLE.
             Text(
-                text = "TILT MAZE",
-                fontSize = 36.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
+                text = "\u2726", fontSize = 50.sp, color = templeGold
             )
+
 
             // Spacer adds empty space between elements.
             Spacer(modifier = Modifier.height(12.dp))
 
+            // GAME TITLE.
+            Text(
+                text = "TILT MAZE",
+                fontSize = 38.sp,
+                fontWeight = FontWeight.Bold,
+                color = parchment
+            )
+
+
             // SUBTITLE.
             Text(
-                text = "Find your way to the goal!",
-                color = Color.LightGray,
+                text = "THE LOST WOOD", fontSize = 14.sp, letterSpacing = 2.sp, color = templeGold
+
+            )
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Text(
+                text = "Guide the magical orb through " + "the ancient labyrinth. ",
+                fontSize = 15.sp,
+                color = lightGreen,
                 textAlign = TextAlign.Center
             )
 
@@ -124,12 +138,18 @@ fun MainMenuScreen(
                 onClick = onStartGame,
 
                 // Make the button as wide as its container.
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = templeGold, contentColor = forestGreen
+                )
             ) {
-                Text("START GAME")
+                Text("BEGIN ADVENTURE", fontWeight = FontWeight.Bold)
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // INSTRUCTIONS BUTTON.
             Button(
@@ -140,30 +160,62 @@ fun MainMenuScreen(
                     showInstructions = true
                 },
 
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = parchment
+                ),
+
+                border = BorderStroke(
+                    width = 1.dp, color = templeGold
+
+                )
             ) {
-                Text("INSTRUCTIONS")
+                Text("HOW TO PLAY")
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // HIGH SCORES BUTTON.
-            Button(
+            OutlinedButton(
 
                 // Show High Scores dialog.
                 onClick = {
                     showScores = true
                 },
 
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = parchment
+                ),
+
+                border = BorderStroke(
+                    width = 1.dp, color = templeGold
+                )
             ) {
-                Text("HIGH SCORES")
+                Text("HALL OF RECORDS")
             }
+
+            Spacer(modifier = Modifier.height(48.dp))
+
+            // Decorative message at the bottom.
+            Text(
+                text = "An Ancient Challenge Awaits!",
+                fontSize = 11.sp,
+                letterSpacing = 1.sp,
+                color = lightGreen,
+                textAlign = TextAlign.Center
+            )
         }
     }
 
 
-    // INSTRUCTIONS DIALOG
+    // Instructions dialog.
     // This block only runs when showInstructions is true.
     if (showInstructions) {
 
@@ -182,28 +234,23 @@ fun MainMenuScreen(
             // Dialog message.
             text = {
                 Text(
-                    "Guide the ball through the maze " +
-                            "and reach the goal.\n\n" +
-                            "Use the directional " +
-                            "buttons to move the ball,till the end of the maze."
+                    "Guide the magical orb to the golden portal.\n\n" + "Tilt your phone to move the orb through " + "the ancient maze.\n\n" + "Avoid the stone walls and reach the " + "portal a quickly as possible.\n\n" + "Use PAUSE to stop the game and " + "Restart to begin again if you are not ready yet."
                 )
             },
 
-            // OK button closes the dialog.
+            // Close button closes the dialog.
             confirmButton = {
                 TextButton(
                     onClick = {
                         showInstructions = false
-                    }
-                ) {
-                    Text("OK")
+                    }) {
+                    Text("CLOSE")
                 }
-            }
-        )
+            })
     }
 
 
-    // HIGH SCORES DIALOG.
+    // High scores dialog.
     if (showScores) {
 
         AlertDialog(
@@ -213,13 +260,12 @@ fun MainMenuScreen(
             },
 
             title = {
-                Text("High Scores")
+                Text("Hall of Records")
             },
 
             text = {
                 Text(
-                    "Your saved best times will " +
-                            "appear here!"
+                    "Your best completion times will " + "appear here in the future!"
                 )
             },
 
@@ -227,11 +273,9 @@ fun MainMenuScreen(
                 TextButton(
                     onClick = {
                         showScores = false
-                    }
-                ) {
-                    Text("OK")
+                    }) {
+                    Text("CLOSE")
                 }
-            }
-        )
+            })
     }
 }
